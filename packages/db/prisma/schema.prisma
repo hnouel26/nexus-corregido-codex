@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Auth
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects      Project[]
+  agents        Agent[]
+  apps          App[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ─────────────────────────────────────────────
+// Projects & Tasks
+// ─────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  color       String        @default("#0085D5")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tasks Task[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  COMPLETED
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  order       Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ─────────────────────────────────────────────
+// Agents (Fase 3 – estructura base)
+// ─────────────────────────────────────────────
+
+model Agent {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  systemPrompt String
+  model       String      @default("gpt-4o")
+  trigger     TriggerType @default(MANUAL)
+  cronExpr    String?
+  webhookToken String?    @unique @default(cuid())
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  runs       AgentRun[]
+  agentTools AgentTool[]
+
+  @@map("agents")
+}
+
+enum TriggerType {
+  MANUAL
+  SCHEDULE
+  WEBHOOK
+}
+
+model AgentRun {
+  scheduledKey String? @unique
+  id        String      @id @default(cuid())
+  status    RunStatus   @default(PENDING)
+  input     String?
+  output    String?
+  logs      Json        @default("[]")
+  startedAt DateTime?
+  endedAt   DateTime?
+  createdAt DateTime    @default(now())
+
+  agentId String
+  agent   Agent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@map("agent_runs")
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────
+// OS: App Registry
+// ─────────────────────────────────────────────
+
+model App {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  url         String
+  icon        String      @default("🔧")
+  category    AppCategory @default(TOOL)
+  healthUrl   String?
+  isHealthy   Boolean?
+  lastHealthAt DateTime?
+  isActive    Boolean     @default(true)
+  isPinned    Boolean     @default(false)
+  order       Int         @default(0)
+  color       String      @default("#0085D5")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("apps")
+}
+
+enum AppCategory {
+  DASHBOARD
+  TOOL
+  DATABASE
+  INTEGRATION
+  INTERNAL
+  EXTERNAL
+}
+
+// ─────────────────────────────────────────────
+// OS: Notifications
+// ─────────────────────────────────────────────
+
+model Notification {
+  id         String           @id @default(cuid())
+  title      String
+  message    String?
+  type       NotificationType @default(INFO)
+  isRead     Boolean          @default(false)
+  link       String?
+  sourceType String?
+  sourceId   String?
+  createdAt  DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// ─────────────────────────────────────────────
+// Tools (Fase 3)
+// ─────────────────────────────────────────────
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  displayName String
+  description String?
+  config      Json     @default("{}")
+  isActive    Boolean  @default(true)
+  category    String?  @default("INTEGRATION")
+  icon        String?  @default("🔧")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agentTools AgentTool[]
+
+  @@map("tools")
+}
+
+model AgentTool {
+  id      String @id @default(cuid())
+  agentId String
+  toolId  String
+  config  Json   @default("{}")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tool  Tool  @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, toolId])
+  @@map("agent_tools")
+}

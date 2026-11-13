@@ -1,0 +1,35 @@
+node_modules/
+.next/
+dist/
+build/
+
+# Env files — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Turbo + build cache
+.turbo/
+.cache/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma migrations (generated locally)
+prisma/migrations/
+
+# pnpm lock is fine to commit — it ensures reproducible installs
+# pnpm-lock.yaml  ← do NOT ignore this
+
+
+.tools/
+*.tsbuildinfo
+.next-dev/

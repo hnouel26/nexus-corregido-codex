@@ -1,0 +1,28 @@
+{
+  "name": "nexus",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotenv -e .env -- pnpm -r --parallel --filter @nexus/web --filter @nexus/worker dev",
+    "build": "dotenv -e .env -- pnpm --filter @nexus/worker build && dotenv -e .env -- pnpm --filter @nexus/web build",
+    "lint": "pnpm --filter @nexus/web lint",
+    "db:generate": "pnpm --filter @nexus/db db:generate",
+    "db:migrate": "dotenv -e .env -- pnpm --filter @nexus/db db:migrate",
+    "db:push": "dotenv -e .env -- pnpm --filter @nexus/db db:push",
+    "db:studio": "dotenv -e .env -- pnpm --filter @nexus/db db:studio",
+    "test": "tsx --tsconfig apps/web/tsconfig.json --test tests/*.test.ts",
+    "typecheck": "pnpm --filter @nexus/web typecheck && pnpm --filter @nexus/worker typecheck",
+    "setup": "node scripts/setup.mjs",
+    "db:seed": "dotenv -e .env -- pnpm --filter @nexus/db db:seed"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5",
+    "tsx": "^4.19.1",
+    "dotenv-cli": "^8.0.0"
+  },
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  }
+}
