@@ -4,7 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { AgentCard } from "@/components/agent-card";
 import { CreateAgentModal } from "@/components/create-agent-modal";
-import { VoiceAssistant } from "@/components/voice-assistant";
+import VoiceAssistant from "@/components/voice-assistant";
 import { Bot, Plus } from "lucide-react";
 
 export default function AgentsPage() {
