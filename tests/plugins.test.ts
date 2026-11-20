@@ -35,3 +35,36 @@ test('Snowflake usa el tipo de token PAT', async (t) => {
   await getPlugin('snowflake')!.execute('query', { sql: 'SELECT 1' }, { account: 'example', patToken: 'fake' });
   assert.equal(tokenType, 'PROGRAMMATIC_ACCESS_TOKEN');
 });
+
+test('KAIBARIX ofrece configuración, acciones y nombres de herramientas compatibles con el worker', () => {
+  const plugin = getPlugin('kaibarix_compliance')!;
+  assert.ok(plugin.getConfigFields().some((field) => field.key === 'kaibarixApiUrl' && field.required));
+  const actions = new Set(plugin.getActions().map((action) => action.name));
+  assert.equal(actions.size, 4);
+  for (const tool of plugin.toClaudeTools()) {
+    assert.ok(tool.name.startsWith(plugin.name + '__'));
+    assert.ok(actions.has(tool.name.slice(plugin.name.length + 2)));
+  }
+});
+test('KAIBARIX ejecuta una acción a través de la interfaz de plugins', async (t) => {
+  let requestedUrl: unknown;
+  let requestedHeaders: unknown;
+  t.mock.method(globalThis, 'fetch', async (url: unknown, options: any) => {
+    requestedUrl = url;
+    requestedHeaders = options.headers;
+    return new Response(JSON.stringify({ regulations: ['HIPAA'] }));
+  });
+  const result = await getPlugin('kaibarix_compliance')!.execute('get_regulations', { industry: 'HEALTHCARE' }, {
+    kaibarixApiUrl: 'https://example.test/api/compliance',
+    kaibarixApiKey: 'fake',
+  });
+  assert.equal(requestedUrl, 'https://example.test/api/compliance/regulations/HEALTHCARE');
+  assert.equal((requestedHeaders as Record<string, string>).Authorization, 'Bearer fake');
+  assert.deepEqual(result, { regulations: ['HIPAA'] });
+});
+test('KAIBARIX rechaza parámetros inválidos antes de realizar solicitudes', async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => { calls++; return new Response('{}'); });
+  await assert.rejects(() => getPlugin('kaibarix_compliance')!.execute('get_regulations', { industry: 'INVALID' }, {}));
+  assert.equal(calls, 0);
+});
