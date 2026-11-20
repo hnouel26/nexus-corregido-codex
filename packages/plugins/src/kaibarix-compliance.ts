@@ -1,4 +1,29 @@
-import { ClaudeTool, Plugin, PluginConfigField } from './types';
+import { z } from 'zod';
+import type { ClaudeTool, Plugin, PluginConfigField, PluginAction, TestResult } from './types';
+import { validatePluginInput } from './validation';
+
+const INDUSTRIES = [
+                'HEALTHCARE',
+                'FINANCIAL_SERVICES',
+                'TAX_PREPARATION',
+                'RETAIL',
+                'MANUFACTURING',
+                'PHARMACEUTICALS',
+                'BIOTECH',
+                'FOOD_BEVERAGE',
+                'AEROSPACE',
+                'AUTOMOTIVE',
+                'ENERGY',
+                'TECHNOLOGY',
+                'EDUCATION',
+                'GOVERNMENT',
+                'LEGAL',
+                'TELECOMMUNICATIONS',
+                'LOGISTICS',
+                'CONSTRUCTION',
+                'INSURANCE',
+                'REAL_ESTATE',
+              ] as const;
 
 export class KaibarixCompliancePlugin implements Plugin {
   name = 'kaibarix_compliance';
@@ -24,38 +49,46 @@ export class KaibarixCompliancePlugin implements Plugin {
     },
   ];
 
+
+  getConfigFields(): PluginConfigField[] {
+    return this.configFields;
+  }
+
+  getActions(): PluginAction[] {
+    return [
+      { name: 'get_regulations', label: 'Consultar regulaciones', description: 'Regulaciones aplicables a una industria', inputSchema: z.object({ industry: z.enum(INDUSTRIES) }) },
+      { name: 'check_compliance', label: 'Verificar compliance', description: 'Estado de una regulación', inputSchema: z.object({ regulation: z.string().min(1), organizationId: z.string().min(1).optional() }) },
+      { name: 'generate_report', label: 'Generar reporte', description: 'Reporte de compliance por período', inputSchema: z.object({ organizationId: z.string().min(1), frameworkId: z.string().min(1).optional(), startDate: z.string().date(), endDate: z.string().date() }) },
+      { name: 'log_audit', label: 'Registrar auditoría', description: 'Registrar un evento de auditoría', inputSchema: z.object({ userId: z.string().min(1), action: z.string().min(1), resource: z.string().min(1), resourceId: z.string().min(1), regulation: z.string().min(1), metadata: z.record(z.unknown()).optional() }) },
+    ];
+  }
+
+  async test(config: Record<string, string>): Promise<TestResult> {
+    if (!config.kaibarixApiUrl) return { ok: false, message: 'API URL de KAIBARIX requerida' };
+    try {
+      await this.execute('get_regulations', { industry: 'HEALTHCARE' }, config);
+      return { ok: true, message: 'Conexión con KAIBARIX verificada' };
+    } catch (error) {
+      return { ok: false, message: 'Error de conexión con KAIBARIX', detail: String(error) };
+    }
+  }
+
+  async execute(action: string, params: unknown, config: Record<string, string>): Promise<unknown> {
+    const input = validatePluginInput(this, action, params);
+    return this.executeAction(action, input, config);
+  }
+
   toClaudeTools(): ClaudeTool[] {
     return [
       {
-        name: 'kaibarix_get_regulations',
+        name: 'kaibarix_compliance__get_regulations',
         description: 'Obtiene las regulaciones aplicables para una industria específica en el sistema KAIBARIX',
         input_schema: {
           type: 'object',
           properties: {
             industry: {
               type: 'string',
-              enum: [
-                'HEALTHCARE',
-                'FINANCIAL_SERVICES',
-                'TAX_PREPARATION',
-                'RETAIL',
-                'MANUFACTURING',
-                'PHARMACEUTICALS',
-                'BIOTECH',
-                'FOOD_BEVERAGE',
-                'AEROSPACE',
-                'AUTOMOTIVE',
-                'ENERGY',
-                'TECHNOLOGY',
-                'EDUCATION',
-                'GOVERNMENT',
-                'LEGAL',
-                'TELECOMMUNICATIONS',
-                'LOGISTICS',
-                'CONSTRUCTION',
-                'INSURANCE',
-                'REAL_ESTATE',
-              ],
+              enum: [...INDUSTRIES],
               description: 'La industria para la cual se obtendrán las regulaciones aplicables',
             },
           },
@@ -63,7 +96,7 @@ export class KaibarixCompliancePlugin implements Plugin {
         },
       },
       {
-        name: 'kaibarix_check_compliance',
+        name: 'kaibarix_compliance__check_compliance',
         description: 'Verifica el estado de compliance para una regulación específica',
         input_schema: {
           type: 'object',
@@ -81,7 +114,7 @@ export class KaibarixCompliancePlugin implements Plugin {
         },
       },
       {
-        name: 'kaibarix_generate_report',
+        name: 'kaibarix_compliance__generate_report',
         description: 'Genera un reporte de compliance para un período específico',
         input_schema: {
           type: 'object',
@@ -107,7 +140,7 @@ export class KaibarixCompliancePlugin implements Plugin {
         },
       },
       {
-        name: 'kaibarix_log_audit',
+        name: 'kaibarix_compliance__log_audit',
         description: 'Registra un evento de auditoría en el sistema de compliance',
         input_schema: {
           type: 'object',
