@@ -131,7 +131,7 @@ export default function VoiceInput({
       
       {transcript && (
         <div className="text-sm text-gray-300">
-          Último: "{transcript.slice(0, 50)}{transcript.length > 50 ? '...' : ''}"
+          Último: &quot;{transcript.slice(0, 50)}{transcript.length > 50 ? '...' : ''}&quot;
         </div>
       )}
     </div>
